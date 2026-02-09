@@ -44,7 +44,7 @@ jobs:
         path: ./artifact
         
     - name: Deploy to Kafka Connect
-      shell: pwsh
+      shell: powershell
       run: |
         $jarPath = "./artifact/connect-smt-1.0.0.jar"
         $targetPath = "C:\Users\vihan\confluent_local\kafka-connect-plugins\custom-smt"
