@@ -5,6 +5,8 @@ import com.example.fhir.connect.smt.mapping.MappingProvider;
 import com.example.fhir.connect.smt.transform.model.FieldSpec;
 import com.example.fhir.connect.smt.transform.model.MappingRules;
 import com.example.fhir.connect.smt.transform.model.TopicMapping;
+import com.example.fhir.connect.smt.util.EncryptionUtil;
+import com.example.fhir.connect.smt.util.MaskingUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.*;
@@ -430,6 +432,10 @@ public final class TransformEngine {
         v = toStringTransform(v);
       else if ("dateFormat".equals(type))
         v = dateFormatTransform(v, t);
+      else if ("encrypt".equals(type))
+        v = encryptTransform(v, t);
+      else if ("mask".equals(type))
+        v = maskTransform(v, t);
     }
     return v;
   }
@@ -497,12 +503,88 @@ public final class TransformEngine {
   public static void clearCaches() {
     PATH_CACHE.clear();
     FORMATTER_CACHE.clear();
+    ENCRYPTION_CACHE.clear();
     log.info("TransformEngine caches cleared");
   }
 
   public static Map<String, Integer> getCacheStats() {
     return Map.of(
         "parsedPaths", PATH_CACHE.size(),
-        "dateFormatters", FORMATTER_CACHE.size());
+        "dateFormatters", FORMATTER_CACHE.size(),
+        "encryptionUtils", ENCRYPTION_CACHE.size());
+  }
+
+  // Cache for EncryptionUtil instances
+  private static final ConcurrentHashMap<String, EncryptionUtil> ENCRYPTION_CACHE = new ConcurrentHashMap<>();
+
+  /**
+   * Encrypt transform - encrypts the value using AES-256-GCM.
+   * Config: { "type": "encrypt", "key": "base64-encoded-32-byte-key" }
+   */
+  private JsonNode encryptTransform(JsonNode v, Map<String, Object> cfg) {
+    if (v == null || v.isNull())
+      return NullNode.getInstance();
+
+    String key = String.valueOf(cfg.get("key"));
+    if (key == null || key.isEmpty() || "null".equals(key)) {
+      log.warn("Encrypt transform missing 'key' config, returning original value");
+      return v;
+    }
+
+    // Resolve environment variable if key starts with ${
+    if (key.startsWith("${") && key.endsWith("}")) {
+      String envVar = key.substring(2, key.length() - 1);
+      key = System.getenv(envVar);
+      if (key == null) {
+        log.error("Environment variable {} not set for encryption key", envVar);
+        return v;
+      }
+    }
+
+    final String resolvedKey = key;
+    EncryptionUtil encryptionUtil = ENCRYPTION_CACHE.computeIfAbsent(resolvedKey, EncryptionUtil::new);
+
+    if (v.isArray()) {
+      ArrayNode out = MAPPER.createArrayNode();
+      for (JsonNode e : v) {
+        out.add(encryptTransform(e, cfg));
+      }
+      return out;
+    }
+
+    if (v.isTextual()) {
+      return TextNode.valueOf(encryptionUtil.encrypt(v.asText()));
+    }
+
+    // For non-text values, convert to string first
+    return TextNode.valueOf(encryptionUtil.encrypt(v.asText()));
+  }
+
+  /**
+   * Mask transform - masks sensitive data based on pattern.
+   * Config: { "type": "mask", "pattern":
+   * "ssn|creditcard|email|phone|name|custom", "customMask": "regex|replacement" }
+   */
+  private JsonNode maskTransform(JsonNode v, Map<String, Object> cfg) {
+    if (v == null || v.isNull())
+      return NullNode.getInstance();
+
+    String pattern = cfg.get("pattern") != null ? String.valueOf(cfg.get("pattern")) : "partial";
+    String customMask = cfg.get("customMask") != null ? String.valueOf(cfg.get("customMask")) : null;
+
+    if (v.isArray()) {
+      ArrayNode out = MAPPER.createArrayNode();
+      for (JsonNode e : v) {
+        out.add(maskTransform(e, cfg));
+      }
+      return out;
+    }
+
+    if (v.isTextual()) {
+      return TextNode.valueOf(MaskingUtil.mask(v.asText(), pattern, customMask));
+    }
+
+    // For non-text values, convert to string first then mask
+    return TextNode.valueOf(MaskingUtil.mask(v.asText(), pattern, customMask));
   }
 }

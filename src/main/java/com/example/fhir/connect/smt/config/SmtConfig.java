@@ -46,7 +46,27 @@ public final class SmtConfig {
         .define("jdbc.array.mode", ConfigDef.Type.STRING, "json_string", ConfigDef.Importance.MEDIUM,
             "How to handle arrays: json_string, first_only, native_array, explode")
         .define("jdbc.column.separator", ConfigDef.Type.STRING, "_", ConfigDef.Importance.LOW,
-            "Separator for flattened column names (e.g., 'member_name' vs 'member.name')");
+            "Separator for flattened column names (e.g., 'member_name' vs 'member.name')")
+        // S3/MinIO external config options
+        .define("mapping.source", ConfigDef.Type.STRING, "classpath", ConfigDef.Importance.MEDIUM,
+            "Mapping source: classpath or s3")
+        .define("mapping.s3.endpoint", ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM,
+            "S3/MinIO endpoint URL (e.g., http://minio:9000)")
+        .define("mapping.s3.bucket", ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM,
+            "S3 bucket name for mapping config")
+        .define("mapping.s3.key", ConfigDef.Type.STRING, "mappings/topic-mappings.json", ConfigDef.Importance.MEDIUM,
+            "S3 object key (path) for mapping file")
+        .define("mapping.s3.accessKey", ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
+            "S3/MinIO access key")
+        .define("mapping.s3.secretKey", ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH,
+            "S3/MinIO secret key")
+        .define("mapping.s3.region", ConfigDef.Type.STRING, "us-east-1", ConfigDef.Importance.LOW,
+            "AWS region (use us-east-1 for MinIO)")
+        // Hot reload options
+        .define("mapping.hotreload.enabled", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM,
+            "Enable hot-reload of mappings from S3")
+        .define("mapping.hotreload.intervalSeconds", ConfigDef.Type.INT, 30, ConfigDef.Importance.LOW,
+            "Hot-reload poll interval in seconds");
   }
 
   // Connector config keys are expected as transforms.<name>.<key>. We'll support
@@ -119,5 +139,97 @@ public final class SmtConfig {
 
   public String jdbcColumnSeparator() {
     return get("jdbc.column.separator", "_");
+  }
+
+  // S3/MinIO config getters - support environment variables as fallbacks
+
+  public String mappingSource() {
+    String v = get("mapping.source", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    // Check if S3 env vars are set, auto-enable S3
+    String endpoint = System.getenv("MAPPING_S3_ENDPOINT");
+    if (endpoint != null && !endpoint.isEmpty())
+      return "s3";
+    return "classpath";
+  }
+
+  public boolean isS3MappingSource() {
+    return "s3".equalsIgnoreCase(mappingSource());
+  }
+
+  public String s3Endpoint() {
+    String v = get("mapping.s3.endpoint", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    return System.getenv("MAPPING_S3_ENDPOINT");
+  }
+
+  public String s3Bucket() {
+    String v = get("mapping.s3.bucket", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    String env = System.getenv("MAPPING_S3_BUCKET");
+    return env != null ? env : "";
+  }
+
+  public String s3Key() {
+    String v = get("mapping.s3.key", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    String env = System.getenv("MAPPING_S3_KEY");
+    return env != null ? env : "mappings/topic-mappings.json";
+  }
+
+  public String s3AccessKey() {
+    String v = get("mapping.s3.accessKey", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    String env = System.getenv("MAPPING_S3_ACCESS_KEY");
+    return env != null ? env : "";
+  }
+
+  public String s3SecretKey() {
+    String v = get("mapping.s3.secretKey", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    String env = System.getenv("MAPPING_S3_SECRET_KEY");
+    return env != null ? env : "";
+  }
+
+  public String s3Region() {
+    String v = get("mapping.s3.region", null);
+    if (v != null && !v.isEmpty())
+      return v;
+    String env = System.getenv("MAPPING_S3_REGION");
+    return env != null ? env : "us-east-1";
+  }
+
+  // Hot reload config getters
+
+  public boolean hotReloadEnabled() {
+    String v = get("mapping.hotreload.enabled", null);
+    if (v != null)
+      return Boolean.parseBoolean(v);
+    String env = System.getenv("MAPPING_HOTRELOAD_ENABLED");
+    return env != null && Boolean.parseBoolean(env);
+  }
+
+  public int hotReloadIntervalSeconds() {
+    String v = get("mapping.hotreload.intervalSeconds", null);
+    if (v != null) {
+      try {
+        return Integer.parseInt(v);
+      } catch (NumberFormatException e) {
+      }
+    }
+    String env = System.getenv("MAPPING_HOTRELOAD_INTERVAL_SECONDS");
+    if (env != null) {
+      try {
+        return Integer.parseInt(env);
+      } catch (NumberFormatException e) {
+      }
+    }
+    return 30;
   }
 }

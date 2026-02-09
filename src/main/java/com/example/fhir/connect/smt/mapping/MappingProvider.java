@@ -6,6 +6,7 @@ import com.example.fhir.connect.smt.transform.validation.MappingValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,8 +23,38 @@ public final class MappingProvider {
     MappingValidator.validate(this.rules);
   }
 
+  // Private constructor for factory method
+  private MappingProvider(MappingRules rules) {
+    this.cfg = null;
+    this.rules = rules;
+  }
+
+  /**
+   * Creates a MappingProvider from a JSON string.
+   * Used for external config loading (S3/MinIO).
+   *
+   * @param jsonContent JSON content of topic-mappings.json
+   * @return MappingProvider instance
+   */
+  public static MappingProvider fromJsonString(String jsonContent) throws Exception {
+    log.info("Loading SMT mappings from external JSON ({} bytes)", jsonContent.length());
+    MappingRules rules = MAPPER.readValue(jsonContent, MappingRules.class);
+    MappingValidator.validate(rules);
+    return new MappingProvider(rules);
+  }
+
   public MappingRules rules() {
     return rules;
+  }
+
+  /**
+   * Gets the set of connector names defined in the mappings.
+   */
+  public Set<String> getConnectorNames() {
+    if (rules != null && rules.getConnectors() != null) {
+      return rules.getConnectors().keySet();
+    }
+    return Set.of();
   }
 
   private MappingRules loadClasspath(String cp) throws Exception {
