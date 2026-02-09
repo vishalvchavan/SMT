@@ -1,0 +1,31 @@
+{
+  "questionnaireResponse": {
+    "identifier": [
+      {
+        "system": "urn:acme:assessmentId",
+        "value": 12345
+      }
+    ],
+    "status": "completed",
+    "authored": "2026-01-30T10:11:12Z"
+  },
+  "patient": {
+    "birthDate": "1990-02-03",
+    "identifier": [
+      {
+        "system": "urn:acme:sdrPersonId",
+        "value": "SDR-999"
+      }
+    ]
+  },
+  "observations": [
+    {
+      "code": "A",
+      "value": 10
+    },
+    {
+      "code": "B",
+      "value": 20
+    }
+  ]
+}

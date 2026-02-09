@@ -1,0 +1,1311 @@
+{
+  "version": 2,
+  "connectors": {
+    "mongo-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "mysql-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "postgres-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "sqlserver-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "oracle-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "snowflake-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "s3-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "completedDate": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ssX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "memberInfo": {
+          "sdrPersonId": {
+            "paths": [
+              "$.patient.identifier[*].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "dateOfBirth": {
+            "paths": [
+              "$.patient.birthDate"
+            ],
+            "required": false,
+            "multi": "first"
+          }
+        },
+        "observations": {
+          "$array": {
+            "path": "$.observations[*]",
+            "item": {
+              "code": {
+                "paths": [
+                  "$.code"
+                ],
+                "required": false,
+                "multi": "first"
+              },
+              "value": {
+                "paths": [
+                  "$.value"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "mongo-claim-submission-sink": {
+      "root": "claimEvent",
+      "output": {
+        "event": {
+          "eventId": {
+            "paths": [
+              "$.eventMeta.eventId"
+            ],
+            "required": true,
+            "multi": "first"
+          },
+          "eventType": {
+            "paths": [
+              "$.eventMeta.eventType"
+            ],
+            "required": true,
+            "multi": "first"
+          },
+          "producedDate": {
+            "paths": [
+              "$.eventMeta.producedAt"
+            ],
+            "required": true,
+            "multi": "first",
+            "transforms": [
+              {
+                "type": "dateFormat",
+                "inputFormats": [
+                  "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                  "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                  "yyyy-MM-dd'T'HH:mm:ssXXX"
+                ],
+                "outputFormat": "yyyy-MM-dd",
+                "timezone": "UTC"
+              }
+            ]
+          },
+          "source": {
+            "system": {
+              "paths": [
+                "$.eventMeta.source.system"
+              ],
+              "required": true,
+              "multi": "first"
+            },
+            "region": {
+              "paths": [
+                "$.eventMeta.source.region"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "version": {
+              "paths": [
+                "$.eventMeta.source.version"
+              ],
+              "required": false,
+              "multi": "first"
+            }
+          },
+          "trace": {
+            "traceId": {
+              "paths": [
+                "$.audit.trace.traceId"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "spanId": {
+              "paths": [
+                "$.audit.trace.spanId"
+              ],
+              "required": false,
+              "multi": "first"
+            }
+          }
+        },
+        "claim": {
+          "claimId": {
+            "paths": [
+              "$.claim.claimId"
+            ],
+            "required": true,
+            "multi": "first"
+          },
+          "claimNumericId": {
+            "paths": [
+              "$.claim.identifiers[?(@.system=='urn:acme:claimId')].value",
+              "$.claim.secondaryId"
+            ],
+            "required": true,
+            "multi": "first",
+            "transforms": [
+              {
+                "type": "toString"
+              }
+            ]
+          },
+          "payerClaimId": {
+            "paths": [
+              "$.claim.identifiers[?(@.system=='urn:external:payerClaimId')].value"
+            ],
+            "required": false,
+            "multi": "first"
+          },
+          "status": {
+            "paths": [
+              "$.claim.status"
+            ],
+            "required": true,
+            "multi": "first"
+          },
+          "submissionDate": {
+            "paths": [
+              "$.claim.submissionDate"
+            ],
+            "required": true,
+            "multi": "first",
+            "transforms": [
+              {
+                "type": "dateFormat",
+                "inputFormats": [
+                  "yyyy-MM-dd'T'HH:mm:ssXXX",
+                  "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                  "yyyy-MM-dd'T'HH:mm:ss'Z'"
+                ],
+                "outputFormat": "yyyy-MM-dd",
+                "timezone": "UTC"
+              }
+            ]
+          },
+          "member": {
+            "memberId": {
+              "paths": [
+                "$.claim.member.memberId"
+              ],
+              "required": true,
+              "multi": "first"
+            },
+            "sdrPersonId": {
+              "paths": [
+                "$.claim.member.identifiers[?(@.system=='urn:acme:sdrPersonId')].value"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "subscriberId": {
+              "paths": [
+                "$.claim.member.identifiers[?(@.system=='urn:acme:subscriberId')].value"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "name": {
+              "firstGiven": {
+                "paths": [
+                  "$.claim.member.name.given"
+                ],
+                "required": true,
+                "multi": "first"
+              },
+              "family": {
+                "paths": [
+                  "$.claim.member.name.family"
+                ],
+                "required": false,
+                "multi": "first"
+              }
+            },
+            "dob": {
+              "paths": [
+                "$.claim.member.demographics.dateOfBirth"
+              ],
+              "required": false,
+              "multi": "first",
+              "transforms": [
+                {
+                  "type": "dateFormat",
+                  "inputFormats": [
+                    "yyyy-MM-dd"
+                  ],
+                  "outputFormat": "yyyy-MM-dd",
+                  "timezone": "UTC"
+                }
+              ]
+            },
+            "primaryEmail": {
+              "paths": [
+                "$.claim.member.contacts[?(@.type=='email' && @.primary==true)].value"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "anyPhone": {
+              "paths": [
+                "$.claim.member.contacts[?(@.type=='phone')].value"
+              ],
+              "required": false,
+              "multi": "first"
+            }
+          },
+          "provider": {
+            "providerId": {
+              "paths": [
+                "$.claim.provider.providerId"
+              ],
+              "required": true,
+              "multi": "first"
+            },
+            "organization": {
+              "name": {
+                "paths": [
+                  "$.claim.provider.organization.name"
+                ],
+                "required": true,
+                "multi": "first"
+              },
+              "npi": {
+                "paths": [
+                  "$.claim.provider.organization.npi"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              },
+              "address": {
+                "city": {
+                  "paths": [
+                    "$.claim.provider.organization.address.city"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "state": {
+                  "paths": [
+                    "$.claim.provider.organization.address.state"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "postalCode": {
+                  "paths": [
+                    "$.claim.provider.organization.address.postalCode"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "country": {
+                  "paths": [
+                    "$.claim.provider.organization.address.country"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                }
+              }
+            },
+            "careTeam": {
+              "$array": {
+                "path": "$.claim.provider.careTeam[*]",
+                "item": {
+                  "role": {
+                    "paths": [
+                      "$.role"
+                    ],
+                    "required": true,
+                    "multi": "first"
+                  },
+                  "practitioner": {
+                    "id": {
+                      "paths": [
+                        "$.practitioner.id"
+                      ],
+                      "required": true,
+                      "multi": "first"
+                    },
+                    "name": {
+                      "paths": [
+                        "$.practitioner.name"
+                      ],
+                      "required": false,
+                      "multi": "first"
+                    },
+                    "specialty": {
+                      "paths": [
+                        "$.practitioner.specialty"
+                      ],
+                      "required": false,
+                      "multi": "first"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "encounter": {
+            "encounterId": {
+              "paths": [
+                "$.claim.encounter.encounterId"
+              ],
+              "required": true,
+              "multi": "first"
+            },
+            "type": {
+              "paths": [
+                "$.claim.encounter.type"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "startDate": {
+              "paths": [
+                "$.claim.encounter.start"
+              ],
+              "required": false,
+              "multi": "first",
+              "transforms": [
+                {
+                  "type": "dateFormat",
+                  "inputFormats": [
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+                  ],
+                  "outputFormat": "yyyy-MM-dd",
+                  "timezone": "UTC"
+                }
+              ]
+            },
+            "endDate": {
+              "paths": [
+                "$.claim.encounter.end"
+              ],
+              "required": false,
+              "multi": "first",
+              "transforms": [
+                {
+                  "type": "dateFormat",
+                  "inputFormats": [
+                    "yyyy-MM-dd'T'HH:mm:ssXXX",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+                  ],
+                  "outputFormat": "yyyy-MM-dd",
+                  "timezone": "UTC"
+                }
+              ]
+            },
+            "diagnoses": {
+              "$array": {
+                "path": "$.claim.encounter.diagnoses[*]",
+                "item": {
+                  "code": {
+                    "paths": [
+                      "$.code"
+                    ],
+                    "required": true,
+                    "multi": "first"
+                  },
+                  "system": {
+                    "paths": [
+                      "$.system"
+                    ],
+                    "required": false,
+                    "multi": "first"
+                  },
+                  "display": {
+                    "paths": [
+                      "$.display"
+                    ],
+                    "required": false,
+                    "multi": "first"
+                  },
+                  "primary": {
+                    "paths": [
+                      "$.primary"
+                    ],
+                    "required": false,
+                    "multi": "first",
+                    "transforms": [
+                      {
+                        "type": "toString"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "services": {
+            "$array": {
+              "path": "$.claim.services[*]",
+              "item": {
+                "serviceLineId": {
+                  "paths": [
+                    "$.serviceLineId"
+                  ],
+                  "required": true,
+                  "multi": "first"
+                },
+                "procedure": {
+                  "code": {
+                    "paths": [
+                      "$.procedure.code"
+                    ],
+                    "required": true,
+                    "multi": "first"
+                  },
+                  "system": {
+                    "paths": [
+                      "$.procedure.system"
+                    ],
+                    "required": false,
+                    "multi": "first"
+                  },
+                  "description": {
+                    "paths": [
+                      "$.procedure.description"
+                    ],
+                    "required": false,
+                    "multi": "first"
+                  }
+                },
+                "quantity": {
+                  "paths": [
+                    "$.quantity"
+                  ],
+                  "required": false,
+                  "multi": "first",
+                  "transforms": [
+                    {
+                      "type": "toString"
+                    }
+                  ]
+                },
+                "unitPrice": {
+                  "paths": [
+                    "$.unitPrice"
+                  ],
+                  "required": false,
+                  "multi": "first",
+                  "transforms": [
+                    {
+                      "type": "toString"
+                    }
+                  ]
+                },
+                "totalCharge": {
+                  "paths": [
+                    "$.totalCharge"
+                  ],
+                  "required": false,
+                  "multi": "first",
+                  "transforms": [
+                    {
+                      "type": "toString"
+                    }
+                  ]
+                },
+                "serviceDate": {
+                  "paths": [
+                    "$.serviceDate"
+                  ],
+                  "required": false,
+                  "multi": "first",
+                  "transforms": [
+                    {
+                      "type": "dateFormat",
+                      "inputFormats": [
+                        "yyyy-MM-dd"
+                      ],
+                      "outputFormat": "yyyy-MM-dd",
+                      "timezone": "UTC"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "financials": {
+            "currency": {
+              "paths": [
+                "$.claim.financials.currency"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "totalBilledAmount": {
+              "paths": [
+                "$.claim.financials.totalBilledAmount"
+              ],
+              "required": false,
+              "multi": "first",
+              "transforms": [
+                {
+                  "type": "toString"
+                }
+              ]
+            },
+            "patientResponsibility": {
+              "copay": {
+                "paths": [
+                  "$.claim.financials.patientResponsibility.copay"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              },
+              "coinsurance": {
+                "paths": [
+                  "$.claim.financials.patientResponsibility.coinsurance"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              },
+              "deductible": {
+                "paths": [
+                  "$.claim.financials.patientResponsibility.deductible"
+                ],
+                "required": false,
+                "multi": "first",
+                "transforms": [
+                  {
+                    "type": "toString"
+                  }
+                ]
+              }
+            },
+            "coverageTier": {
+              "paths": [
+                "$.claim.financials.extensions[?(@.url=='urn:acme:coverageTier')].valueString"
+              ],
+              "required": false,
+              "multi": "first"
+            },
+            "isHighCostClaim": {
+              "paths": [
+                "$.claim.financials.extensions[?(@.url=='urn:acme:isHighCostClaim')].valueBoolean"
+              ],
+              "required": false,
+              "multi": "first",
+              "transforms": [
+                {
+                  "type": "toString"
+                }
+              ]
+            }
+          },
+          "attachments": {
+            "$array": {
+              "path": "$.claim.attachments[*]",
+              "item": {
+                "type": {
+                  "paths": [
+                    "$.type"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "name": {
+                  "paths": [
+                    "$.name"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "contentType": {
+                  "paths": [
+                    "$.contentType"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                },
+                "storageRef": {
+                  "paths": [
+                    "$.storageRef"
+                  ],
+                  "required": false,
+                  "multi": "first"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "elasticsearch-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first"
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "category": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='category')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "code": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='code')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "effectiveDateTime": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first"
+        }
+      }
+    },
+    "redis-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first"
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "category": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='category')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "code": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='code')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "effectiveDateTime": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first"
+        }
+      }
+    },
+    "cassandra-assessment-sink": {
+      "root": "assessment",
+      "output": {
+        "assessmentId": {
+          "paths": [
+            "$.questionnaireResponse.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first"
+        },
+        "status": {
+          "paths": [
+            "$.questionnaireResponse.status"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "category": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='category')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "code": {
+          "paths": [
+            "$.questionnaireResponse.item[?(@.linkId=='code')].answer[*].valueCoding.display"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "effectiveDateTime": {
+          "paths": [
+            "$.questionnaireResponse.authored"
+          ],
+          "required": false,
+          "multi": "first"
+        }
+      }
+    }
+  }
+}
