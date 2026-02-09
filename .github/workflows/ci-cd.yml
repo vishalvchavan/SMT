@@ -44,18 +44,15 @@ jobs:
         path: ./artifact
         
     - name: Deploy to Kafka Connect
-      shell: powershell
+      shell: cmd
       run: |
-        $jarPath = "./artifact/connect-smt-1.0.0.jar"
-        $targetPath = "C:\Users\vihan\confluent_local\kafka-connect-plugins\custom-smt"
+        echo Copying JAR to plugins folder...
+        copy /Y ".\artifact\connect-smt-1.0.0.jar" "C:\Users\vihan\confluent_local\kafka-connect-plugins\custom-smt\"
         
-        Write-Host "Copying JAR to $targetPath..."
-        Copy-Item -Path $jarPath -Destination $targetPath -Force
-        
-        Write-Host "Restarting Connect container..."
+        echo Restarting Connect container...
         docker restart connect
         
-        Write-Host "Waiting for Connect to be ready..."
-        Start-Sleep -Seconds 30
+        echo Waiting for Connect to be ready...
+        timeout /t 30 /nobreak
         
-        Write-Host "Deployment complete!"
+        echo Deployment complete!
