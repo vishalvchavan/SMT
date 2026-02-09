@@ -53,6 +53,6 @@ jobs:
         docker restart connect
         
         echo Waiting for Connect to be ready...
-        timeout /t 30 /nobreak
+        ping -n 31 127.0.0.1 > nul
         
         echo Deployment complete!

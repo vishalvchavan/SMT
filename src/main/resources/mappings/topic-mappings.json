@@ -1306,6 +1306,121 @@
           "multi": "first"
         }
       }
+    },
+    "oracle-patient-sink": {
+      "root": "patient",
+      "output": {
+        "patientId": {
+          "paths": [
+            "$.patient.identifier[*].value"
+          ],
+          "required": true,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "toString"
+            }
+          ]
+        },
+        "firstName": {
+          "paths": [
+            "$.patient.name[*].given[*]"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "lastName": {
+          "paths": [
+            "$.patient.name[*].family"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "dateOfBirth": {
+          "paths": [
+            "$.patient.birthDate"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd"
+              ],
+              "outputFormat": "yyyy-MM-dd",
+              "timezone": "UTC"
+            }
+          ]
+        },
+        "gender": {
+          "paths": [
+            "$.patient.gender"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "phone": {
+          "paths": [
+            "$.patient.telecom[?(@.system=='phone')].value"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "email": {
+          "paths": [
+            "$.patient.telecom[?(@.system=='email')].value"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "addressLine": {
+          "paths": [
+            "$.patient.address[*].line[*]"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "city": {
+          "paths": [
+            "$.patient.address[*].city"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "state": {
+          "paths": [
+            "$.patient.address[*].state"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "postalCode": {
+          "paths": [
+            "$.patient.address[*].postalCode"
+          ],
+          "required": false,
+          "multi": "first"
+        },
+        "createdAt": {
+          "paths": [
+            "$.metadata.createdAt"
+          ],
+          "required": false,
+          "multi": "first",
+          "transforms": [
+            {
+              "type": "dateFormat",
+              "inputFormats": [
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+              ],
+              "outputFormat": "yyyy-MM-dd HH:mm:ss",
+              "timezone": "UTC"
+            }
+          ]
+        }
+      }
     }
   }
 }
