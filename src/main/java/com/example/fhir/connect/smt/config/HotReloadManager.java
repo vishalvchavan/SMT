@@ -1,6 +1,8 @@
 package com.example.fhir.connect.smt.config;
 
 import com.example.fhir.connect.smt.mapping.MappingProvider;
+import com.example.fhir.connect.smt.observability.SmtHealthMBean;
+import com.example.fhir.connect.smt.observability.SmtMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,11 +104,19 @@ public class HotReloadManager implements AutoCloseable {
                     onReload.accept(newProvider);
                 }
 
+                // Record success metrics
+                SmtMetrics.getInstance().recordHotReloadSuccess();
+                SmtHealthMBean health = SmtHealthMBean.getInstance();
+                health.recordReloadSuccess();
+                health.setConnectorNames(newProvider.getConnectorNames());
+
                 LOG.info("Mappings reloaded successfully - {} connector mappings loaded",
                         newProvider.getConnectorNames().size());
             }
         } catch (Exception e) {
             LOG.error("Failed to reload config: {}", e.getMessage(), e);
+            SmtMetrics.getInstance().recordHotReloadFailure();
+            SmtHealthMBean.getInstance().recordReloadFailure(e.getMessage());
         }
     }
 

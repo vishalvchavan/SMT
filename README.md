@@ -113,7 +113,94 @@ transforms.Extract.target.database=snowflake
 | `app.failOnMissingMapping` | `false` | Log error (vs warn) if no mapping found |
 | `app.attachKafkaMetadata` | `true` | Add `_kafka: {topic, partition}` to output |
 | `app.storeRawPayload` | `false` | Include original JSON as `_raw` |
+| `app.trace.enabled` | `false` | Enable TRACE-level transform tracing per record |
+| `app.metrics.enabled` | `true` | Enable JMX metrics registration |
 | `jdbc.flatten.nested` | `true` | Flatten nested objects to columns (JDBC only) |
 | `jdbc.array.mode` | `json_string` | Array handling: json_string, first_only, native_array, explode |
 | `jdbc.column.separator` | `_` | Separator for flattened columns (e.g., `member_name`) |
 
+## Observability
+
+### JMX Metrics
+
+When `app.metrics.enabled=true` (default), the SMT registers two JMX MBeans:
+
+**`connect.smt:type=DynamicJsonExtract`** — Transform metrics:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `RecordsProcessed` | Counter | Successful transforms |
+| `RecordsFailed` | Counter | Failed transforms |
+| `RecordsSkipped` | Counter | Records with no mapping (passthrough) |
+| `AvgTransformLatencyMs` | Gauge | Average transform latency |
+| `LastTransformLatencyMs` | Gauge | Most recent transform latency |
+| `MaxTransformLatencyMs` | Gauge | Worst-case transform latency |
+| `PayloadBytesTotal` | Counter | Total input bytes processed |
+| `MappingLookupMisses` | Counter | Missing mapping lookups |
+| `HotReloadSuccessCount` | Counter | Successful config reloads |
+| `HotReloadFailureCount` | Counter | Failed config reloads |
+| `EncryptCallsTotal` | Counter | Encrypt transform invocations |
+| `MaskCallsTotal` | Counter | Mask transform invocations |
+| `UptimeSeconds` | Gauge | Seconds since SMT configured |
+
+JMX Operation: `resetMetrics()` — resets all counters to zero.
+
+**`connect.smt:type=SmtHealth`** — Health status:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `Status` | String | `HEALTHY`, `DEGRADED`, or `UNHEALTHY` |
+| `MappingSource` | String | `classpath` or `s3` |
+| `TargetDatabase` | String | Target database type |
+| `ConnectorNames` | String | Comma-separated connector names |
+| `LastReloadTime` | String | ISO timestamp of last reload |
+| `LastReloadStatus` | String | `SUCCESS`, `FAILED: <reason>`, or `N/A` |
+| `ErrorRate5Min` | Double | Error rate in last 5-minute window |
+| `UptimeSeconds` | Long | Seconds since startup |
+
+JMX Operation: `forceReload()` — triggers immediate config reload from S3.
+
+### Prometheus JMX Exporter
+
+Example scrape config for `jmx_exporter`:
+```yaml
+rules:
+  - pattern: 'connect.smt<type=DynamicJsonExtract><>(\w+)'
+    name: smt_$1
+    type: GAUGE
+  - pattern: 'connect.smt<type=SmtHealth><>(\w+)'
+    name: smt_health_$1
+    type: GAUGE
+```
+
+### Transform Tracing
+
+Enable per-record trace logging with `app.trace.enabled=true`. Logs at TRACE level:
+
+```
+TRACE [topic=fhir-assessments partition=3 offset=14502]
+  Input: {"resourceType":"Patient","id":"123"...}
+  Mapping lookup: connector=mongo-sink → FOUND (root=documentRoot)
+  Field "patient_id" ← $.id = "123"
+  Field "birth_date" ← $.birthDate = "1990-01-15"
+    → dateFormat: "1990-01-15" → "01/15/1990"
+  Field "ssn" ← $.identifier[?(@.system=='ssn')].value = "123-45-6789"
+    → mask: "123-45-6789" → "***-**-6789"
+  Output: {"patient_id":"123","birth_date":"01/15/1990",...}
+  Completed in 3.2ms
+```
+
+### Structured Logging (MDC)
+
+Every log line during `apply()` carries MDC context keys:
+
+| MDC Key | Description |
+|---------|-------------|
+| `connector` | Connector name from config |
+| `topic` | Kafka topic name |
+| `partition` | Kafka partition number |
+
+Use these in your logging pattern, e.g.:
+```
+%d [%X{connector}/%X{topic}/%X{partition}] %-5level %logger - %msg%n
+```

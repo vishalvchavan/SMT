@@ -66,7 +66,12 @@ public final class SmtConfig {
         .define("mapping.hotreload.enabled", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM,
             "Enable hot-reload of mappings from S3")
         .define("mapping.hotreload.intervalSeconds", ConfigDef.Type.INT, 30, ConfigDef.Importance.LOW,
-            "Hot-reload poll interval in seconds");
+            "Hot-reload poll interval in seconds")
+        // Observability options
+        .define("app.trace.enabled", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+            "Enable TRACE-level transform tracing (logs full extract/transform pipeline per record)")
+        .define("app.metrics.enabled", ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.LOW,
+            "Enable JMX metrics registration for monitoring");
   }
 
   // Connector config keys are expected as transforms.<name>.<key>. We'll support
@@ -114,6 +119,14 @@ public final class SmtConfig {
 
   public boolean storeRawPayload() {
     return getBool("app.storeRawPayload", false);
+  }
+
+  public boolean traceEnabled() {
+    return getBool("app.trace.enabled", false);
+  }
+
+  public boolean metricsEnabled() {
+    return getBool("app.metrics.enabled", true);
   }
 
   // Multi-database config getters

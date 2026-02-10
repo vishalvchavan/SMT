@@ -2,6 +2,8 @@ package com.example.fhir.connect.smt.transform;
 
 import com.example.fhir.connect.smt.config.SmtConfig;
 import com.example.fhir.connect.smt.mapping.MappingProvider;
+import com.example.fhir.connect.smt.observability.SmtMetrics;
+import com.example.fhir.connect.smt.observability.TransformTracer;
 import com.example.fhir.connect.smt.transform.model.FieldSpec;
 import com.example.fhir.connect.smt.transform.model.MappingRules;
 import com.example.fhir.connect.smt.transform.model.TopicMapping;
@@ -49,15 +51,19 @@ public final class TransformEngine {
 
   // Cache for parsed path segments
   private static final ConcurrentHashMap<String, PathSegment[]> PATH_CACHE = new ConcurrentHashMap<>();
-  // cicd checking
   // Cache for DateTimeFormatter instances
   private static final ConcurrentHashMap<String, DateTimeFormatter> FORMATTER_CACHE = new ConcurrentHashMap<>();
 
   private final MappingProvider mappingProvider;
+  private final TransformTracer tracer;
 
   public TransformEngine(MappingProvider mappingProvider) {
+    this(mappingProvider, null);
+  }
+
+  public TransformEngine(MappingProvider mappingProvider, TransformTracer tracer) {
     this.mappingProvider = mappingProvider;
-    // testing
+    this.tracer = tracer;
   }
 
   /**
@@ -303,7 +309,26 @@ public final class TransformEngine {
         log.error("Missing mapping for {}", lookupKey);
       else
         log.warn("No mapping for {} (leaving record unchanged)", lookupKey);
+
+      // Record mapping miss metric
+      SmtMetrics metrics = SmtMetrics.getInstance();
+      metrics.recordMappingMiss();
+
+      // Trace mapping miss
+      if (tracer != null && tracer.isEnabled()) {
+        String type = lookupKey.startsWith("connector=") ? "connector" : "topic";
+        String name = lookupKey.substring(lookupKey.indexOf('=') + 1);
+        tracer.traceMapping(name, type, false, null);
+      }
+
       return null;
+    }
+
+    // Trace mapping found
+    if (tracer != null && tracer.isEnabled()) {
+      String type = lookupKey.startsWith("connector=") ? "connector" : "topic";
+      String name = lookupKey.substring(lookupKey.indexOf('=') + 1);
+      tracer.traceMapping(name, type, true, tm.getRoot());
     }
 
     ObjectNode payloadObj = MAPPER.createObjectNode();
@@ -388,11 +413,18 @@ public final class TransformEngine {
   private JsonNode extractAndTransform(String topic, JsonNode root, FieldSpec spec, String fieldName) {
     // Navigate using pure Jackson
     JsonNode read = null;
+    String matchedPath = null;
     for (String path : spec.getPaths()) {
       read = extractValue(root, path);
       if (read != null && !read.isMissingNode() && !read.isNull()) {
+        matchedPath = path;
         break;
       }
+    }
+
+    // Trace field extraction
+    if (tracer != null && tracer.isEnabled() && matchedPath != null) {
+      tracer.traceField(fieldName, matchedPath, read);
     }
 
     JsonNode normalized;
@@ -428,6 +460,8 @@ public final class TransformEngine {
     JsonNode v = normalized;
     for (Map<String, Object> t : transforms) {
       String type = String.valueOf(t.get("type"));
+      JsonNode before = v;
+
       if ("toString".equals(type))
         v = toStringTransform(v);
       else if ("dateFormat".equals(type))
@@ -436,6 +470,11 @@ public final class TransformEngine {
         v = encryptTransform(v, t);
       else if ("mask".equals(type))
         v = maskTransform(v, t);
+
+      // Trace transform step
+      if (tracer != null && tracer.isEnabled()) {
+        tracer.traceTransformStep(fieldName, type, before, v);
+      }
     }
     return v;
   }
@@ -484,12 +523,7 @@ public final class TransformEngine {
         // Try parsing as LocalDate for date-only formats
         try {
           DateTimeFormatter inFormatter = getFormatter(inFmt, tz);
-          // LocalDate parsing is safer with default formatter for standard dates, but
-          // here strictly use pattern
           LocalDate date = LocalDate.parse(text, inFormatter);
-          // When formatting LocalDate to output containing time, it might fail or need
-          // start of day.
-          // For now, assume output format matches context.
           DateTimeFormatter outFormatter = getFormatter(outputFormat, tz);
           return TextNode.valueOf(date.format(outFormatter));
         } catch (java.time.DateTimeException ex2) {
@@ -544,6 +578,9 @@ public final class TransformEngine {
     final String resolvedKey = key;
     EncryptionUtil encryptionUtil = ENCRYPTION_CACHE.computeIfAbsent(resolvedKey, EncryptionUtil::new);
 
+    // Record encrypt metric
+    SmtMetrics.getInstance().recordEncryptCall();
+
     if (v.isArray()) {
       ArrayNode out = MAPPER.createArrayNode();
       for (JsonNode e : v) {
@@ -571,6 +608,9 @@ public final class TransformEngine {
 
     String pattern = cfg.get("pattern") != null ? String.valueOf(cfg.get("pattern")) : "partial";
     String customMask = cfg.get("customMask") != null ? String.valueOf(cfg.get("customMask")) : null;
+
+    // Record mask metric
+    SmtMetrics.getInstance().recordMaskCall();
 
     if (v.isArray()) {
       ArrayNode out = MAPPER.createArrayNode();
