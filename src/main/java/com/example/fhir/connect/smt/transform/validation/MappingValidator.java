@@ -8,6 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * Validates mapping configuration at startup to catch errors early.
+ * Supports transforms: toString, dateFormat, mask, encrypt.
+ */
 public final class MappingValidator {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Pattern NUMERIC_INDEX = Pattern.compile("\\[(\\s*\\d+\\s*)\\]");
@@ -113,6 +117,15 @@ public final class MappingValidator {
           throw new IllegalArgumentException(topic + ": dateFormat.inputFormats required at " + path + "[" + i + "]");
         if (asString(out) == null)
           throw new IllegalArgumentException(topic + ": dateFormat.outputFormat required at " + path + "[" + i + "]");
+      } else if ("mask".equals(type)) {
+        // mask transform - pattern is optional (defaults to "partial")
+        // valid patterns: ssn, creditcard, email, phone, name, full, partial, custom
+      } else if ("encrypt".equals(type)) {
+        // encrypt transform - key is required (can be env var reference like
+        // ${ENCRYPTION_KEY})
+        Object key = t.get("key");
+        if (asString(key) == null)
+          throw new IllegalArgumentException(topic + ": encrypt.key required at " + path + "[" + i + "]");
       } else {
         throw new IllegalArgumentException(
             topic + ": unsupported transform type=" + type + " at " + path + "[" + i + "]");
