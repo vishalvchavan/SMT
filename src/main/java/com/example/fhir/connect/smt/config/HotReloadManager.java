@@ -22,7 +22,7 @@ public class HotReloadManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(HotReloadManager.class);
 
     private final S3ConfigLoader configLoader;
-    private final AtomicReference<MappingProvider> mappingProviderRef;
+    private final AtomicReference<MappingProvider> lastKnownGoodProvider;
     private final Consumer<MappingProvider> onReload;
     private final ScheduledExecutorService scheduler;
     private final AtomicBoolean running;
@@ -41,7 +41,7 @@ public class HotReloadManager implements AutoCloseable {
             Consumer<MappingProvider> onReload,
             long intervalSeconds) {
         this.configLoader = configLoader;
-        this.mappingProviderRef = new AtomicReference<>(initialMappingProvider);
+        this.lastKnownGoodProvider = new AtomicReference<>(initialMappingProvider);
         this.onReload = onReload;
         this.intervalSeconds = intervalSeconds;
         this.running = new AtomicBoolean(false);
@@ -88,16 +88,24 @@ public class HotReloadManager implements AutoCloseable {
      * Checks for config changes and reloads if necessary.
      */
     private void checkAndReload() {
+        reloadInternal(false);
+    }
+
+    private boolean reloadInternal(boolean force) {
         try {
-            String newConfig = configLoader.loadIfChanged();
+            String newConfig = force ? configLoader.loadConfig() : configLoader.loadIfChanged();
             if (newConfig != null) {
-                LOG.info("Config change detected, reloading mappings...");
+                if (force) {
+                    LOG.info("Forced reload requested, reloading mappings...");
+                } else {
+                    LOG.info("Config change detected, reloading mappings...");
+                }
 
                 // Create new MappingProvider from updated config
                 MappingProvider newProvider = MappingProvider.fromJsonString(newConfig);
 
-                // Atomic swap
-                MappingProvider oldProvider = mappingProviderRef.getAndSet(newProvider);
+                // Atomic swap of last known good provider
+                lastKnownGoodProvider.set(newProvider);
 
                 // Notify callback
                 if (onReload != null) {
@@ -112,11 +120,14 @@ public class HotReloadManager implements AutoCloseable {
 
                 LOG.info("Mappings reloaded successfully - {} connector mappings loaded",
                         newProvider.getConnectorNames().size());
+                return true;
             }
+            return false;
         } catch (Exception e) {
-            LOG.error("Failed to reload config: {}", e.getMessage(), e);
+            LOG.error("Failed to reload config, continuing with last known good mapping: {}", e.getMessage(), e);
             SmtMetrics.getInstance().recordHotReloadFailure();
-            SmtHealthMBean.getInstance().recordReloadFailure(e.getMessage());
+            SmtHealthMBean.getInstance().recordReloadFailure("Using last known good mapping: " + e.getMessage());
+            return false;
         }
     }
 
@@ -124,27 +135,15 @@ public class HotReloadManager implements AutoCloseable {
      * Gets the current MappingProvider (thread-safe).
      */
     public MappingProvider getCurrentMappingProvider() {
-        return mappingProviderRef.get();
+        return lastKnownGoodProvider.get();
     }
 
     /**
      * Forces an immediate reload (bypasses change detection).
      */
     public void forceReload() {
-        try {
-            String config = configLoader.loadConfig();
-            MappingProvider newProvider = MappingProvider.fromJsonString(config);
-            mappingProviderRef.set(newProvider);
-
-            if (onReload != null) {
-                onReload.accept(newProvider);
-            }
-
-            LOG.info("Forced reload completed - {} connector mappings loaded",
-                    newProvider.getConnectorNames().size());
-        } catch (Exception e) {
-            LOG.error("Forced reload failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Forced reload failed", e);
+        if (!reloadInternal(true)) {
+            throw new RuntimeException("Forced reload failed");
         }
     }
 

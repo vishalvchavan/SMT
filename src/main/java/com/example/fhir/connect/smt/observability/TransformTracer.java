@@ -41,14 +41,16 @@ public final class TransformTracer {
     /**
      * Start trace for a new record.
      */
-    public void traceStart(String topic, int partition, long offset) {
+    public void traceStart(String topic, int partition, long timestamp, long mappingVersion) {
         if (!enabled)
             return;
         StringBuilder sb = getBuffer();
         sb.setLength(0);
         sb.append("TRACE [topic=").append(topic)
                 .append(" partition=").append(partition)
-                .append(" offset=").append(offset).append("]\n");
+                .append(" timestamp=").append(timestamp)
+                .append(" mappingVersion=").append(mappingVersion)
+                .append("]\n");
     }
 
     /**

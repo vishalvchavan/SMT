@@ -1,5 +1,7 @@
 package com.example.fhir.connect.smt.observability;
 
+import com.example.fhir.connect.smt.transform.TransformEngine;
+
 import javax.management.*;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
@@ -188,6 +190,26 @@ public class SmtMetrics implements SmtMetricsMXBean {
     }
 
     @Override
+    public long getTransformCacheSize() {
+        return TransformEngine.getCacheMetrics().getOrDefault("size", 0L);
+    }
+
+    @Override
+    public long getTransformCacheHitsTotal() {
+        return TransformEngine.getCacheMetrics().getOrDefault("hits", 0L);
+    }
+
+    @Override
+    public long getTransformCacheMissesTotal() {
+        return TransformEngine.getCacheMetrics().getOrDefault("misses", 0L);
+    }
+
+    @Override
+    public long getTransformCacheEvictionsTotal() {
+        return TransformEngine.getCacheMetrics().getOrDefault("evictions", 0L);
+    }
+
+    @Override
     public long getUptimeSeconds() {
         return (System.currentTimeMillis() - startTimeMs.get()) / 1000;
     }
@@ -229,6 +251,10 @@ public class SmtMetrics implements SmtMetricsMXBean {
                 Map.entry("hotReloadFailureCount", getHotReloadFailureCount()),
                 Map.entry("encryptCallsTotal", getEncryptCallsTotal()),
                 Map.entry("maskCallsTotal", getMaskCallsTotal()),
+                Map.entry("transformCacheSize", getTransformCacheSize()),
+                Map.entry("transformCacheHitsTotal", getTransformCacheHitsTotal()),
+                Map.entry("transformCacheMissesTotal", getTransformCacheMissesTotal()),
+                Map.entry("transformCacheEvictionsTotal", getTransformCacheEvictionsTotal()),
                 Map.entry("uptimeSeconds", getUptimeSeconds()));
     }
 

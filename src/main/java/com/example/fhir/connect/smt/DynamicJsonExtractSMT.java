@@ -27,14 +27,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transformation<R> {
   private static final Logger log = LoggerFactory.getLogger(DynamicJsonExtractSMT.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  private record TransformSnapshot(MappingProvider mappingProvider, TransformEngine engine, long version) {
+  }
+
   private SmtConfig cfg;
-  private AtomicReference<MappingProvider> mappingProviderRef;
-  private AtomicReference<TransformEngine> engineRef;
+  private AtomicReference<TransformSnapshot> snapshotRef;
+  private AtomicLong snapshotVersionCounter;
   private OutputFormatter formatter;
   private S3ConfigLoader s3ConfigLoader;
   private HotReloadManager hotReloadManager;
@@ -49,8 +53,8 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
   public void configure(Map<String, ?> configs) {
     try {
       this.cfg = SmtConfig.load(configs);
-      this.mappingProviderRef = new AtomicReference<>();
-      this.engineRef = new AtomicReference<>();
+      this.snapshotRef = new AtomicReference<>();
+      this.snapshotVersionCounter = new AtomicLong(0);
 
       // --- Observability init ---
       this.metricsEnabled = cfg.metricsEnabled();
@@ -87,9 +91,8 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
               s3ConfigLoader,
               mappingProvider,
               newProvider -> {
-                mappingProviderRef.set(newProvider);
-                engineRef.set(new TransformEngine(newProvider, tracer));
-                log.info("Hot-reloaded mappings from S3");
+                installSnapshot(newProvider);
+                log.info("Hot-reloaded mappings from S3 (version={})", snapshotRef.get().version());
               },
               cfg.hotReloadIntervalSeconds());
           hotReloadManager.start();
@@ -100,8 +103,7 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
         mappingProvider = new MappingProvider(cfg);
       }
 
-      this.mappingProviderRef.set(mappingProvider);
-      this.engineRef.set(new TransformEngine(mappingProvider, tracer));
+      installSnapshot(mappingProvider);
 
       // Initialize formatter based on target database
       DatabaseType dbType = cfg.targetDatabase();
@@ -118,7 +120,7 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
       if (healthMBean != null) {
         healthMBean.setMappingSource(cfg.mappingSource());
         healthMBean.setTargetDatabase(dbType.name());
-        healthMBean.setConnectorNames(mappingProvider.getConnectorNames());
+        healthMBean.setConnectorNames(snapshotRef.get().mappingProvider().getConnectorNames());
         if (hotReloadManager != null) {
           healthMBean.setForceReloadAction(() -> hotReloadManager.forceReload());
         }
@@ -142,6 +144,10 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
     if (record.kafkaPartition() != null) {
       MDC.put("partition", String.valueOf(record.kafkaPartition()));
     }
+    TransformSnapshot snapshot = snapshotRef.get();
+    if (snapshot != null) {
+      MDC.put("mappingVersion", String.valueOf(snapshot.version()));
+    }
 
     long startNanos = System.nanoTime();
 
@@ -155,7 +161,8 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
         tracer.traceStart(
             record.topic(),
             record.kafkaPartition() != null ? record.kafkaPartition() : -1,
-            record.timestamp() != null ? record.timestamp() : -1L);
+            record.timestamp() != null ? record.timestamp() : -1L,
+            snapshot != null ? snapshot.version() : -1L);
       }
 
       JsonNode input = MAPPER.readTree(bytes);
@@ -166,7 +173,10 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
 
       // Skip root wrapper for JDBC/relational targets (non-MongoDB)
       boolean skipRootWrapper = cfg.targetDatabase() != DatabaseType.MONGODB;
-      JsonNode transformedJson = engineRef.get().transform(record.topic(), input, cfg, record, skipRootWrapper);
+      if (snapshot == null) {
+        throw new DataException("Transform snapshot is not initialized");
+      }
+      JsonNode transformedJson = snapshot.engine().transform(record.topic(), input, cfg, record, skipRootWrapper);
       if (transformedJson == null) {
         // no mapping => keep or skip? we keep original as per cfg flag; engine returns
         // null for "skip"
@@ -248,6 +258,7 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
     if (healthMBean != null) {
       healthMBean.unregister();
     }
+    TransformEngine.clearCaches();
   }
 
   private byte[] toBytes(Object value) {
@@ -257,10 +268,9 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
       if (value instanceof String s)
         return s.getBytes(StandardCharsets.UTF_8);
       if (value instanceof ByteBuffer bb) {
-        if (bb.hasArray())
-          return bb.array();
-        byte[] out = new byte[bb.remaining()];
-        bb.get(out);
+        ByteBuffer copy = bb.slice();
+        byte[] out = new byte[copy.remaining()];
+        copy.get(out);
         return out;
       }
       if (value instanceof Map<?, ?> m)
@@ -282,5 +292,15 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
     } catch (Exception e) {
       throw new DataException("Failed to convert record value to bytes. Type=" + value.getClass().getName(), e);
     }
+  }
+
+  private void installSnapshot(MappingProvider mappingProvider) {
+    long version = snapshotVersionCounter.incrementAndGet();
+    TransformSnapshot newSnapshot = new TransformSnapshot(
+        mappingProvider,
+        new TransformEngine(mappingProvider, tracer),
+        version);
+    snapshotRef.set(newSnapshot);
+    TransformEngine.clearCaches();
   }
 }

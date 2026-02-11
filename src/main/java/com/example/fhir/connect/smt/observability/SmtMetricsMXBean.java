@@ -27,6 +27,14 @@ public interface SmtMetricsMXBean {
 
     long getMaskCallsTotal();
 
+    long getTransformCacheSize();
+
+    long getTransformCacheHitsTotal();
+
+    long getTransformCacheMissesTotal();
+
+    long getTransformCacheEvictionsTotal();
+
     // Gauges
     double getAvgTransformLatencyMs();
 

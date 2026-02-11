@@ -71,6 +71,13 @@
       <artifactId>s3</artifactId>
       <version>2.25.16</version>
     </dependency>
+
+    <!-- Bounded high-throughput caches -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>3.1.8</version>
+    </dependency>
   </dependencies>
 
   <build>

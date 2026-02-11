@@ -1,5 +1,7 @@
 package com.example.fhir.connect.smt.transform;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.example.fhir.connect.smt.config.SmtConfig;
 import com.example.fhir.connect.smt.mapping.MappingProvider;
 import com.example.fhir.connect.smt.observability.SmtMetrics;
@@ -18,11 +20,16 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,10 +56,22 @@ public final class TransformEngine {
           "\\[(\\d+|\\*)]|" +
           "([\\w]+)");
 
-  // Cache for parsed path segments
-  private static final ConcurrentHashMap<String, PathSegment[]> PATH_CACHE = new ConcurrentHashMap<>();
-  // Cache for DateTimeFormatter instances
-  private static final ConcurrentHashMap<String, DateTimeFormatter> FORMATTER_CACHE = new ConcurrentHashMap<>();
+  private static final long PATH_CACHE_MAX_SIZE = 10_000;
+  private static final long FORMATTER_CACHE_MAX_SIZE = 1_000;
+  private static final long ENCRYPTION_CACHE_MAX_SIZE = 500;
+  private static final int MAX_PATH_CACHEABLE_LENGTH = 512;
+
+  // Bounded caches with stats for operational visibility.
+  private static final Cache<String, PathSegment[]> PATH_CACHE = Caffeine.newBuilder()
+      .maximumSize(PATH_CACHE_MAX_SIZE)
+      .expireAfterAccess(6, TimeUnit.HOURS)
+      .recordStats()
+      .build();
+  private static final Cache<String, DateTimeFormatter> FORMATTER_CACHE = Caffeine.newBuilder()
+      .maximumSize(FORMATTER_CACHE_MAX_SIZE)
+      .expireAfterAccess(6, TimeUnit.HOURS)
+      .recordStats()
+      .build();
 
   private final MappingProvider mappingProvider;
   private final TransformTracer tracer;
@@ -115,31 +134,37 @@ public final class TransformEngine {
    * Parse a JSONPath expression into segments for fast navigation.
    */
   private static PathSegment[] parsePath(String jsonPath) {
-    return PATH_CACHE.computeIfAbsent(jsonPath, path -> {
-      String cleanPath = path.startsWith("$.") ? path.substring(2) : path;
+    if (jsonPath == null) {
+      return new PathSegment[0];
+    }
+    if (jsonPath.length() > MAX_PATH_CACHEABLE_LENGTH) {
+      return parsePathSegments(jsonPath);
+    }
+    return PATH_CACHE.get(jsonPath, TransformEngine::parsePathSegments);
+  }
 
-      java.util.List<PathSegment> segments = new java.util.ArrayList<>();
-      Matcher matcher = PATH_SEGMENT_PATTERN.matcher(cleanPath);
+  private static PathSegment[] parsePathSegments(String path) {
+    String cleanPath = path.startsWith("$.") ? path.substring(2) : path;
+    List<PathSegment> segments = new ArrayList<>();
+    Matcher matcher = PATH_SEGMENT_PATTERN.matcher(cleanPath);
 
-      while (matcher.find()) {
-        if (matcher.group(1) != null) {
-          segments.add(PathSegment.filter(
-              matcher.group(1), matcher.group(2),
-              matcher.group(3), matcher.group(4)));
-        } else if (matcher.group(5) != null) {
-          String idx = matcher.group(5);
-          if ("*".equals(idx)) {
-            segments.add(PathSegment.arrayAll());
-          } else {
-            segments.add(PathSegment.arrayIndex(Integer.parseInt(idx)));
-          }
-        } else if (matcher.group(6) != null) {
-          segments.add(PathSegment.field(matcher.group(6)));
+    while (matcher.find()) {
+      if (matcher.group(1) != null) {
+        segments.add(PathSegment.filter(
+            matcher.group(1), matcher.group(2),
+            matcher.group(3), matcher.group(4)));
+      } else if (matcher.group(5) != null) {
+        String idx = matcher.group(5);
+        if ("*".equals(idx)) {
+          segments.add(PathSegment.arrayAll());
+        } else {
+          segments.add(PathSegment.arrayIndex(Integer.parseInt(idx)));
         }
+      } else if (matcher.group(6) != null) {
+        segments.add(PathSegment.field(matcher.group(6)));
       }
-
-      return segments.toArray(new PathSegment[0]);
-    });
+    }
+    return segments.toArray(new PathSegment[0]);
   }
 
   /**
@@ -275,7 +300,7 @@ public final class TransformEngine {
    */
   private static DateTimeFormatter getFormatter(String pattern, String timezone) {
     String cacheKey = pattern + "|" + timezone;
-    return FORMATTER_CACHE.computeIfAbsent(cacheKey,
+    return FORMATTER_CACHE.get(cacheKey,
         k -> DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.of(timezone)));
   }
 
@@ -509,47 +534,88 @@ public final class TransformEngine {
       return NullNode.getInstance();
 
     List<String> inputFormats = (List<String>) cfg.get("inputFormats");
-    String outputFormat = String.valueOf(cfg.get("outputFormat"));
+    if (inputFormats == null || inputFormats.isEmpty()) {
+      return NullNode.getInstance();
+    }
+
+    Object outputFormatObj = cfg.get("outputFormat");
+    if (outputFormatObj == null) {
+      return NullNode.getInstance();
+    }
+
+    String outputFormat = String.valueOf(outputFormatObj);
     String tz = cfg.get("timezone") == null ? "UTC" : String.valueOf(cfg.get("timezone"));
+    ZoneId zoneId = ZoneId.of(tz);
+    DateTimeFormatter outFormatter = getFormatter(outputFormat, tz);
 
     String text = v.asText();
     for (String inFmt : inputFormats) {
       try {
         DateTimeFormatter inFormatter = getFormatter(inFmt, tz);
-        Instant inst = Instant.from(inFormatter.parse(text));
-        DateTimeFormatter outFormatter = getFormatter(outputFormat, tz);
-        return TextNode.valueOf(outFormatter.format(inst));
-      } catch (java.time.DateTimeException ex) {
-        // Try parsing as LocalDate for date-only formats
-        try {
-          DateTimeFormatter inFormatter = getFormatter(inFmt, tz);
-          LocalDate date = LocalDate.parse(text, inFormatter);
-          DateTimeFormatter outFormatter = getFormatter(outputFormat, tz);
-          return TextNode.valueOf(date.format(outFormatter));
-        } catch (java.time.DateTimeException ex2) {
-          // try next format
+        TemporalAccessor parsed = inFormatter.parseBest(
+            text,
+            Instant::from,
+            ZonedDateTime::from,
+            OffsetDateTime::from,
+            LocalDateTime::from,
+            LocalDate::from);
+
+        if (parsed instanceof Instant inst) {
+          return TextNode.valueOf(outFormatter.format(inst));
         }
+        if (parsed instanceof ZonedDateTime zdt) {
+          return TextNode.valueOf(outFormatter.format(zdt.withZoneSameInstant(zoneId)));
+        }
+        if (parsed instanceof OffsetDateTime odt) {
+          return TextNode.valueOf(outFormatter.format(odt.atZoneSameInstant(zoneId)));
+        }
+        if (parsed instanceof LocalDateTime ldt) {
+          return TextNode.valueOf(outFormatter.format(ldt.atZone(zoneId)));
+        }
+        if (parsed instanceof LocalDate ld) {
+          return TextNode.valueOf(outFormatter.format(ld));
+        }
+      } catch (java.time.DateTimeException ex) {
+        // try next format
       }
     }
     return NullNode.getInstance();
   }
 
   public static void clearCaches() {
-    PATH_CACHE.clear();
-    FORMATTER_CACHE.clear();
-    ENCRYPTION_CACHE.clear();
+    PATH_CACHE.invalidateAll();
+    FORMATTER_CACHE.invalidateAll();
+    ENCRYPTION_CACHE.invalidateAll();
     log.info("TransformEngine caches cleared");
   }
 
-  public static Map<String, Integer> getCacheStats() {
+  public static Map<String, Long> getCacheStats() {
     return Map.of(
-        "parsedPaths", PATH_CACHE.size(),
-        "dateFormatters", FORMATTER_CACHE.size(),
-        "encryptionUtils", ENCRYPTION_CACHE.size());
+        "parsedPaths", PATH_CACHE.estimatedSize(),
+        "dateFormatters", FORMATTER_CACHE.estimatedSize(),
+        "encryptionUtils", ENCRYPTION_CACHE.estimatedSize());
+  }
+
+  public static Map<String, Long> getCacheMetrics() {
+    long hits = PATH_CACHE.stats().hitCount() + FORMATTER_CACHE.stats().hitCount() + ENCRYPTION_CACHE.stats().hitCount();
+    long misses = PATH_CACHE.stats().missCount() + FORMATTER_CACHE.stats().missCount() + ENCRYPTION_CACHE.stats().missCount();
+    long evictions = PATH_CACHE.stats().evictionCount() + FORMATTER_CACHE.stats().evictionCount()
+        + ENCRYPTION_CACHE.stats().evictionCount();
+    long size = PATH_CACHE.estimatedSize() + FORMATTER_CACHE.estimatedSize() + ENCRYPTION_CACHE.estimatedSize();
+
+    return Map.of(
+        "hits", hits,
+        "misses", misses,
+        "evictions", evictions,
+        "size", size);
   }
 
   // Cache for EncryptionUtil instances
-  private static final ConcurrentHashMap<String, EncryptionUtil> ENCRYPTION_CACHE = new ConcurrentHashMap<>();
+  private static final Cache<String, EncryptionUtil> ENCRYPTION_CACHE = Caffeine.newBuilder()
+      .maximumSize(ENCRYPTION_CACHE_MAX_SIZE)
+      .expireAfterAccess(6, TimeUnit.HOURS)
+      .recordStats()
+      .build();
 
   /**
    * Encrypt transform - encrypts the value using AES-256-GCM.
@@ -576,7 +642,7 @@ public final class TransformEngine {
     }
 
     final String resolvedKey = key;
-    EncryptionUtil encryptionUtil = ENCRYPTION_CACHE.computeIfAbsent(resolvedKey, EncryptionUtil::new);
+    EncryptionUtil encryptionUtil = ENCRYPTION_CACHE.get(resolvedKey, EncryptionUtil::new);
 
     // Record encrypt metric
     SmtMetrics.getInstance().recordEncryptCall();
