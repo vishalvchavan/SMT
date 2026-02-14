@@ -53,6 +53,10 @@ public final class OutputFormatterFactory {
             case NEO4J -> new Neo4jOutputFormatter();
             case INFLUXDB -> new InfluxDbOutputFormatter();
             case VECTORDB -> new VectorDbOutputFormatter();
+            case RDF -> new RdfOutputFormatter();
+            case LEDGER -> new LedgerOutputFormatter();
+            case EMBEDDED -> new EmbeddedOutputFormatter();
+            case OBJECT_STORE -> new ObjectStoreOutputFormatter();
         };
     }
 

@@ -62,7 +62,31 @@ public enum DatabaseType {
      * Vector database sinks (Pinecone/Milvus/Weaviate class).
      * Emits schemaless JSON maps preserving embedding arrays.
      */
-    VECTORDB("vectordb");
+    VECTORDB("vectordb"),
+
+    /**
+     * RDF / semantic graph sinks (triple stores).
+     * Emits schemaless JSON maps for connector-side RDF mapping/serialization.
+     */
+    RDF("rdf"),
+
+    /**
+     * Ledger / immutable database sinks.
+     * Emits schemaless JSON maps for connector-side transaction/entry mapping.
+     */
+    LEDGER("ledger"),
+
+    /**
+     * Embedded / edge relational sinks (e.g., SQLite/DuckDB via JDBC).
+     * Emits schema-aware Struct output.
+     */
+    EMBEDDED("embedded"),
+
+    /**
+     * Object store style sinks where JSON objects are persisted as analytical
+     * objects/documents.
+     */
+    OBJECT_STORE("object_store");
 
     private final String configValue;
 
@@ -93,20 +117,21 @@ public enum DatabaseType {
             }
         }
         throw new IllegalArgumentException("Unknown database type: " + value +
-                ". Supported: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb");
+                ". Supported: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb, rdf, ledger, embedded, object_store");
     }
 
     /**
      * Check if this database type requires a Connect schema (JDBC sinks).
      */
     public boolean requiresSchema() {
-        return this != MONGODB && this != NEO4J && this != INFLUXDB && this != VECTORDB;
+        return this != MONGODB && this != NEO4J && this != INFLUXDB && this != VECTORDB
+                && this != RDF && this != LEDGER && this != OBJECT_STORE;
     }
 
     /**
      * Check if this is a traditional JDBC-based database.
      */
     public boolean isJdbc() {
-        return this == MYSQL || this == POSTGRESQL || this == SQLSERVER || this == ORACLE;
+        return this == MYSQL || this == POSTGRESQL || this == SQLSERVER || this == ORACLE || this == EMBEDDED;
     }
 }

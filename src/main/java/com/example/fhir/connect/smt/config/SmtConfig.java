@@ -40,7 +40,7 @@ public final class SmtConfig {
             "Attach _raw input to output")
         // Multi-database support options
         .define("target.database", ConfigDef.Type.STRING, "mongodb", ConfigDef.Importance.HIGH,
-            "Target database type: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb")
+            "Target database type: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb, rdf, ledger, embedded, object_store")
         .define("jdbc.flatten.nested", ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.MEDIUM,
             "Flatten nested objects to columns (for JDBC sinks)")
         .define("jdbc.array.mode", ConfigDef.Type.STRING, "json_string", ConfigDef.Importance.MEDIUM,
