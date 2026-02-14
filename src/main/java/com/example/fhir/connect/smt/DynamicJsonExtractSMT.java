@@ -171,8 +171,8 @@ public class DynamicJsonExtractSMT<R extends ConnectRecord<R>> implements Transf
         tracer.traceInput(input);
       }
 
-      // Skip root wrapper for JDBC/relational targets (non-MongoDB)
-      boolean skipRootWrapper = cfg.targetDatabase() != DatabaseType.MONGODB;
+      // Skip root wrapper for schema-oriented targets.
+      boolean skipRootWrapper = cfg.targetDatabase().requiresSchema();
       if (snapshot == null) {
         throw new DataException("Transform snapshot is not initialized");
       }

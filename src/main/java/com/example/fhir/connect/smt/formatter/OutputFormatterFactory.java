@@ -50,6 +50,9 @@ public final class OutputFormatterFactory {
             case ORACLE -> new OracleOutputFormatter();
             case SNOWFLAKE -> new SnowflakeOutputFormatter();
             case DELTA_LAKE -> new DeltaLakeOutputFormatter();
+            case NEO4J -> new Neo4jOutputFormatter();
+            case INFLUXDB -> new InfluxDbOutputFormatter();
+            case VECTORDB -> new VectorDbOutputFormatter();
         };
     }
 

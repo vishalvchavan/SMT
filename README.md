@@ -12,7 +12,7 @@
 
 ## Multi-Database Support
 
-The SMT supports 7 target database types. Configure via `target.database`:
+The SMT supports 10 target database types. Configure via `target.database`:
 
 | Database | Config Value | Key Features |
 |----------|--------------|--------------|
@@ -23,6 +23,9 @@ The SMT supports 7 target database types. Configure via `target.database`:
 | Oracle | `oracle` | NUMBER(1) booleans, CLOB JSON |
 | Snowflake | `snowflake` | VARIANT for nested/arrays |
 | Delta Lake | `delta_lake` | Spark StructType, ArrayType |
+| Neo4j | `neo4j` | Schemaless JSON maps for graph mapping |
+| InfluxDB | `influxdb` | Schemaless JSON maps for time-series field/tag mapping |
+| Vector DB | `vectordb` | Schemaless JSON maps preserving embedding arrays |
 
 ## Connector-Based Mapping (v2)
 Mappings are keyed by **connector name** instead of topic name. This allows:
@@ -108,7 +111,7 @@ transforms.Extract.target.database=snowflake
 | Property | Default | Description |
 |----------|---------|-------------|
 | `connector.name` | `""` | **Required**: Connector name for mapping lookup |
-| `target.database` | `mongodb` | Target database: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake |
+| `target.database` | `mongodb` | Target database: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb |
 | `mapping.classpathRoot` | `mappings/topic-mappings.json` | Path to mapping config inside JAR |
 | `app.failOnMissingMapping` | `false` | Log error (vs warn) if no mapping found |
 | `app.attachKafkaMetadata` | `true` | Add `_kafka: {topic, partition}` to output |

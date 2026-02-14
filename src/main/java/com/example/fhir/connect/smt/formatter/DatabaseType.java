@@ -44,7 +44,25 @@ public enum DatabaseType {
      * Delta Lake (Databricks) - Parquet-based lakehouse output.
      * Uses Spark/Delta compatible types with struct support.
      */
-    DELTA_LAKE("delta_lake");
+    DELTA_LAKE("delta_lake"),
+
+    /**
+     * Neo4j / graph-oriented sinks.
+     * Emits schemaless JSON maps for connector-side graph mapping.
+     */
+    NEO4J("neo4j"),
+
+    /**
+     * InfluxDB / time-series sinks.
+     * Emits schemaless JSON maps for connector-side field/tag mapping.
+     */
+    INFLUXDB("influxdb"),
+
+    /**
+     * Vector database sinks (Pinecone/Milvus/Weaviate class).
+     * Emits schemaless JSON maps preserving embedding arrays.
+     */
+    VECTORDB("vectordb");
 
     private final String configValue;
 
@@ -75,14 +93,14 @@ public enum DatabaseType {
             }
         }
         throw new IllegalArgumentException("Unknown database type: " + value +
-                ". Supported: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake");
+                ". Supported: mongodb, mysql, postgresql, sqlserver, oracle, snowflake, delta_lake, neo4j, influxdb, vectordb");
     }
 
     /**
      * Check if this database type requires a Connect schema (JDBC sinks).
      */
     public boolean requiresSchema() {
-        return this != MONGODB;
+        return this != MONGODB && this != NEO4J && this != INFLUXDB && this != VECTORDB;
     }
 
     /**
